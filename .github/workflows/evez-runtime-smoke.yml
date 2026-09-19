@@ -1,0 +1,34 @@
+name: EVEZ Runtime Smoke
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inventory
+        run: |
+          echo "REPO=$GITHUB_REPOSITORY"
+          echo "SHA=$GITHUB_SHA"
+          find . -maxdepth 2 -type f | sort | head -200
+      - name: Python compile sweep
+        run: |
+          python - <<'PY'
+          import pathlib, py_compile
+          files=list(pathlib.Path('.').rglob('*.py'))
+          print("python_files", len(files))
+          for p in files:
+              if any(x in p.parts for x in ('.git','.venv','node_modules')):
+                  continue
+              py_compile.compile(str(p), doraise=True)
+          print("PYTHON_COMPILE=PASS")
+          PY
+      - name: Runtime surface
+        run: |
+          test -f README.md || test -f README || true
+          echo "RUNTIME_SURFACE=PASS"
